@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.PointF;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
@@ -17,10 +18,39 @@ public class PageAdapter extends BaseAdapter {
 	private final MuPDFCore mCore;
 	private final SparseArray<PointF> mPageSizes = new SparseArray<PointF>();
 	private       Bitmap mSharedHqBm;
+	private final FirstPageNotifier firstPageNotifier = new FirstPageNotifier();
 
 	public PageAdapter(Context c, MuPDFCore core) {
 		mContext = c;
 		mCore = core;
+	}
+
+	public interface FirstPageRenderedListener {
+		void onFirstPageRendered(Bitmap bitmap, String text, com.artifex.mupdf.fitz.BarcodeInfo[] barcodes);
+	}
+
+	/**
+	 * Notifica apenas uma vez quando a primeira página for renderizada.
+	 */
+	public static class FirstPageNotifier {
+		private FirstPageRenderedListener listener;
+		private boolean notified;
+
+		public void setListener(FirstPageRenderedListener listener) {
+			this.listener = listener;
+			this.notified = false;
+		}
+
+		public void notify(Bitmap bitmap, String text, com.artifex.mupdf.fitz.BarcodeInfo[] barcodes) {
+			if (!notified && listener != null && bitmap != null) {
+				notified = true;
+				listener.onFirstPageRendered(bitmap, text, barcodes);
+			}
+		}
+	}
+
+	public void setFirstPageRenderedListener(FirstPageRenderedListener listener) {
+		firstPageNotifier.setListener(listener);
 	}
 
 	public int getCount() {
@@ -54,17 +84,16 @@ public class PageAdapter extends BaseAdapter {
 	public synchronized View getView(final int position, View convertView, ViewGroup parent) {
 		final PageView pageView;
 		if (convertView == null) {
-			if (mSharedHqBm == null || mSharedHqBm.getWidth() != parent.getWidth() || mSharedHqBm.getHeight() != parent.getHeight())
+			Point parentSize = getSafeParentSize(parent);
+			if (mSharedHqBm == null || mSharedHqBm.getWidth() != parentSize.x || mSharedHqBm.getHeight() != parentSize.y)
 			{
-				if (parent.getWidth() > 0 && parent.getHeight() > 0)
-					mSharedHqBm = Bitmap.createBitmap(parent.getWidth(), parent.getHeight(), Bitmap.Config.ARGB_8888);
-				else
-					mSharedHqBm = null;
+				mSharedHqBm = Bitmap.createBitmap(parentSize.x, parentSize.y, Bitmap.Config.ARGB_8888);
 			}
 
-			pageView = new PageView(mContext, mCore, new Point(parent.getWidth(), parent.getHeight()), mSharedHqBm);
+			pageView = new PageView(mContext, mCore, parentSize, mSharedHqBm, firstPageNotifier);
 		} else {
 			pageView = (PageView) convertView;
+			pageView.setFirstPageNotifier(firstPageNotifier);
 		}
 
 		PointF pageSize = mPageSizes.get(position);
@@ -101,5 +130,20 @@ public class PageAdapter extends BaseAdapter {
 			sizingTask.execute((Void)null);
 		}
 		return pageView;
+	}
+
+	private Point getSafeParentSize(ViewGroup parent) {
+		int width = parent != null ? parent.getWidth() : 0;
+		int height = parent != null ? parent.getHeight() : 0;
+		if (width <= 0 || height <= 0) {
+			DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
+			if (width <= 0) {
+				width = metrics.widthPixels;
+			}
+			if (height <= 0) {
+				height = metrics.heightPixels;
+			}
+		}
+		return new Point(Math.max(1, width), Math.max(1, height));
 	}
 }

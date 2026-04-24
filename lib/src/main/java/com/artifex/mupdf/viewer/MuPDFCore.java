@@ -1,5 +1,6 @@
 package com.artifex.mupdf.viewer;
 
+import com.artifex.mupdf.fitz.BarcodeInfo;
 import com.artifex.mupdf.fitz.Cookie;
 import com.artifex.mupdf.fitz.DisplayList;
 import com.artifex.mupdf.fitz.Document;
@@ -11,6 +12,7 @@ import com.artifex.mupdf.fitz.Quad;
 import com.artifex.mupdf.fitz.Rect;
 import com.artifex.mupdf.fitz.RectI;
 import com.artifex.mupdf.fitz.SeekableInputStream;
+import com.artifex.mupdf.fitz.StructuredText;
 import com.artifex.mupdf.fitz.android.AndroidDrawDevice;
 
 import android.content.Context;
@@ -34,13 +36,21 @@ public class MuPDFCore
 	private float pageWidth;
 	private float pageHeight;
 	private DisplayList displayList;
+	private boolean barcodeSupported = true;
+	public void setResolution(int dpi){
+		if(dpi>0){
+			this.resolution=dpi;
+		}
+	}
 
 	/* Default to "A Format" pocket book size. */
 	private int layoutW = 312;
 	private int layoutH = 504;
 	private int layoutEM = 10;
 
-	private MuPDFCore(Document doc) {
+    private LoadBitmapTask loadBitmapTask=null;
+
+    public MuPDFCore(Document doc) {
 		this.doc = doc;
 		doc.layout(layoutW, layoutH, layoutEM);
 		pageCount = doc.countPages();
@@ -49,7 +59,11 @@ public class MuPDFCore
 		currentPage = -1;
 	}
 
-	public MuPDFCore(byte buffer[], String magic) {
+    public void setOnLoad(LoadBitmapTask onLoad) {
+        this.loadBitmapTask = onLoad;
+    }
+
+    public MuPDFCore(byte buffer[], String magic) {
 		this(Document.openDocument(buffer, magic));
 	}
 
@@ -166,6 +180,8 @@ public class MuPDFCore
 			dev.close();
 		} finally {
 			dev.destroy();
+            if (loadBitmapTask!=null)
+                loadBitmapTask.onLoad(bm);
 		}
 	}
 
@@ -180,6 +196,44 @@ public class MuPDFCore
 	public synchronized Link[] getPageLinks(int pageNum) {
 		gotoPage(pageNum);
 		return page != null ? page.getLinks() : null;
+	}
+
+	public synchronized BarcodeInfo[] getPageBarcodes(int pageNum) {
+		if (!barcodeSupported) {
+			return new BarcodeInfo[0];
+		}
+		gotoPage(pageNum);
+		if (page == null) {
+			return new BarcodeInfo[0];
+		}
+        try {
+            BarcodeInfo info = page.decodeBarcode();
+            if (info != null && info.type != BarcodeInfo.BARCODE_NONE && info.contents != null) {
+                return new BarcodeInfo[]{info};
+            }
+
+        } catch (Throwable ignored) {
+			// Algumas builds não incluem suporte a barcode; desabilita para evitar exceções repetidas.
+			barcodeSupported = false;
+        }
+
+		return new BarcodeInfo[0];
+	}
+
+	public synchronized String getPageText(int pageNum) {
+		gotoPage(pageNum);
+		if (page == null) {
+			return null;
+		}
+		try {
+			StructuredText st = page.toStructuredText();
+			if (st == null) {
+				return null;
+			}
+			return st.asText();
+		} catch (Exception e) {
+			return null;
+		}
 	}
 
 	public synchronized int resolveLink(Link link) {

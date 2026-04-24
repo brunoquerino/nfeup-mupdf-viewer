@@ -6,19 +6,18 @@ version = '1.26.10a'
 
 dependencies {
 	implementation 'androidx.appcompat:appcompat:1.1.+'
-	if (file('../jni/build.gradle').isFile())
-		api project(':jni')
-	else
-		api 'com.artifex.mupdf:fitz:1.26.10'
+	api 'com.artifex.mupdf:fitz:1.26.10'
 }
 
 android {
 	namespace 'com.artifex.mupdf.viewer'
-	compileSdkVersion 33
-	defaultConfig {
-		minSdkVersion 21
-		targetSdkVersion 35
-	}
+    defaultConfig {
+        minSdkVersion myMinSdkVersion
+        targetSdkVersion myTargetSdkVersion
+        compileSdkVersion = myCompileSdkVersion
+        //targetSdkVersion 25
+    }
+
 	publishing {
 		singleVariant("release") {
 			withSourcesJar()

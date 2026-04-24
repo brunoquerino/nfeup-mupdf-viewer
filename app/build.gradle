@@ -3,52 +3,83 @@ apply plugin: 'com.android.application'
 group = 'com.artifex.mupdf'
 version = '1.26.10a'
 
+repositories {
+    google()
+    mavenCentral()
+    // se você for usar AAR local em app/libs:
+    // flatDir { dirs 'libs' }
+}
+
 dependencies {
-	if (file('../lib/build.gradle').isFile())
-		api project(':lib')
-	else
-		api 'com.artifex.mupdf:viewer:1.26.10a'
+    if (file('../lib/build.gradle').isFile()) {
+        implementation project(':lib')
+    } else {
+        // se NÃO tiver repo maven deles, troque pela linha do AAR local:
+        implementation 'com.artifex.mupdf:viewer:1.26.10a'
+        // implementation(name: 'mupdf-android-viewer', ext: 'aar')
+    }
 }
 
 android {
-	namespace 'com.artifex.mupdf.viewer.app'
-	compileSdkVersion 33
-	defaultConfig {
-		minSdkVersion 21
-		targetSdkVersion 35
-		versionName '1.26.10a'
-		versionCode 179
-	}
+    namespace 'com.artifex.mupdf.viewer.app'
 
-	splits {
-		abi {
-			enable true
-			universalApk true
-		}
-	}
+    // DSL nova
+    compileSdk 35
 
-	bundle {
-		abi {
-			enableSplit true
-		}
-	}
+    defaultConfig {
+        minSdk 21
+        targetSdk 35
+        versionName '1.26.10a'
+        versionCode 179
 
-	if (project.hasProperty('release_storeFile')) {
-		signingConfigs {
-			release {
-				storeFile file(release_storeFile)
-				storePassword release_storePassword
-				keyAlias release_keyAlias
-				keyPassword release_keyPassword
-			}
-		}
-		buildTypes {
-			release {
-				signingConfig signingConfigs.release
-				ndk {
-					debugSymbolLevel 'FULL'
-				}
-			}
-		}
-	}
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+            // adicione 'x86_64' no debug se usar emulador x86_64
+        }
+    }
+
+ 
+
+    // AAB com split por ABI (Play distribui certo)
+    bundle {
+        abi {
+            enableSplit true
+        }
+    }
+
+    // assinatura opcional (mantive sua lógica)
+    if (project.hasProperty('release_storeFile')) {
+        signingConfigs {
+            release {
+                storeFile file(release_storeFile)
+                storePassword release_storePassword
+                keyAlias release_keyAlias
+                keyPassword release_keyPassword
+            }
+        }
+        buildTypes {
+            release {
+                signingConfig signingConfigs.release
+                ndk { debugSymbolLevel 'FULL' }
+            }
+        }
+    } else {
+        buildTypes {
+            release {
+                ndk { debugSymbolLevel 'FULL' }
+            }
+        }
+    }
+
+    // substitui packagingOptions no AGP 8.x
+    packaging {
+        jniLibs {
+            excludes += ["**/mips/**", "**/mips64/**", "**/armeabi/**", "**/riscv64/**"]
+            // se aparecer aviso de strip que te incomode, pode usar:
+            // useLegacyPackaging = true
+        }
+    }
+
+    // (opcional, mas ajuda a evitar surpresas)
+    // ndkVersion "26.3.11579264"
 }

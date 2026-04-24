@@ -71,9 +71,14 @@ public class ReaderView
 	private float		  mLastScaleFocusY;
 
 	protected Stack<Integer> mHistory;
+	private PageLongPressListener pageLongPressListener;
 
 	public interface ViewMapper {
 		void applyToView(View view);
+	}
+
+	public interface PageLongPressListener {
+		void onLongPress(int pageIndex, float x, float y);
 	}
 
 	public ReaderView(Context context) {
@@ -470,7 +475,15 @@ public class ReaderView
 		return true;
 	}
 
-	public void onLongPress(MotionEvent e) { }
+	public void setPageLongPressListener(PageLongPressListener listener) {
+		this.pageLongPressListener = listener;
+	}
+
+	public void onLongPress(MotionEvent e) {
+		if (pageLongPressListener != null) {
+			pageLongPressListener.onLongPress(mCurrent, e.getX(), e.getY());
+		}
+	}
 
 	public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX,
 			float distanceY) {

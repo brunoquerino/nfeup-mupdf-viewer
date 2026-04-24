@@ -42,7 +42,7 @@ import android.widget.Toast;
 import android.os.AsyncTask;
 
 // Make our ImageViews opaque to optimize redraw
-class OpaqueImageView extends ImageView {
+class OpaqueImageView extends androidx.appcompat.widget.AppCompatImageView {
 
 	public OpaqueImageView(Context context) {
 		super(context);
@@ -74,6 +74,7 @@ public class PageView extends ViewGroup {
 	private       ImageView mEntire; // Image rendered at minimum zoom
 	private       Bitmap    mEntireBm;
 	private       Matrix    mEntireMat;
+	private       PageAdapter.FirstPageNotifier firstPageNotifier;
 	private       AsyncTask<Void,Void,Link[]> mGetLinkInfo;
 	private       CancellableAsyncTask<Void, Boolean> mDrawEntire;
 
@@ -93,15 +94,73 @@ public class PageView extends ViewGroup {
 	private       ProgressBar mBusyIndicator;
 	private final Handler   mHandler = new Handler();
 
-	public PageView(Context c, MuPDFCore core, Point parentSize, Bitmap sharedHqBm) {
+	public PageView(Context c, MuPDFCore core, Point parentSize, Bitmap sharedHqBm, PageAdapter.FirstPageNotifier notifier) {
 		super(c);
 		mContext = c;
 		mCore = core;
-		mParentSize = parentSize;
+		mParentSize = sanitizeSize(parentSize);
+		firstPageNotifier = notifier;
 		setBackgroundColor(BACKGROUND_COLOR);
-		mEntireBm = Bitmap.createBitmap(parentSize.x, parentSize.y, Config.ARGB_8888);
+		mEntireBm = Bitmap.createBitmap(mParentSize.x, mParentSize.y, Config.ARGB_8888);
 		mPatchBm = sharedHqBm;
 		mEntireMat = new Matrix();
+	}
+
+	public void setFirstPageNotifier(PageAdapter.FirstPageNotifier notifier) {
+		this.firstPageNotifier = notifier;
+	}
+
+	private void notifyFirstPageRenderedIfNeeded() {
+		if (firstPageNotifier != null && mPageNumber == 0 && mEntireBm != null && mSize != null) {
+			int copyWidth = Math.min(mSize.x, mEntireBm.getWidth());
+			int copyHeight = Math.min(mSize.y, mEntireBm.getHeight());
+			if (copyWidth <= 0 || copyHeight <= 0) {
+				return;
+			}
+
+			final Bitmap copy;
+			try {
+				copy = Bitmap.createBitmap(mEntireBm, 0, 0, copyWidth, copyHeight);
+			} catch (OutOfMemoryError ignored) {
+				return;
+			} catch (IllegalArgumentException ignored) {
+				return;
+			}
+
+			new AsyncTask<Void, Void, Object[]>() {
+				@Override
+				protected Object[] doInBackground(Void... voids) {
+					// Movido para Thread secundária para não travar a UI!
+					String text = mCore.getPageText(mPageNumber);
+					com.artifex.mupdf.fitz.BarcodeInfo[] barcodes = mCore.getPageBarcodes(mPageNumber);
+					return new Object[]{text, barcodes};
+				}
+
+				@Override
+				protected void onPostExecute(Object[] result) {
+					String text = (String) result[0];
+					com.artifex.mupdf.fitz.BarcodeInfo[] barcodes = (com.artifex.mupdf.fitz.BarcodeInfo[]) result[1];
+					firstPageNotifier.notify(copy, text, barcodes);
+				}
+			}.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+		}
+	}
+
+	private Point sanitizeSize(Point size) {
+		if (size == null) {
+			return new Point(1, 1);
+		}
+		return new Point(Math.max(1, size.x), Math.max(1, size.y));
+	}
+
+	private boolean isInvalidPageSize(PointF size) {
+		return size == null
+				|| size.x <= 0
+				|| size.y <= 0
+				|| Float.isNaN(size.x)
+				|| Float.isNaN(size.y)
+				|| Float.isInfinite(size.x)
+				|| Float.isInfinite(size.y);
 	}
 
 	private void reinit() {
@@ -235,7 +294,7 @@ public class PageView extends ViewGroup {
 
 		mPageNumber = page;
 
-		if (size == null) {
+		if (isInvalidPageSize(size)) {
 			setRenderError("Error loading page");
 			size = new PointF(612, 792);
 		}
@@ -243,7 +302,12 @@ public class PageView extends ViewGroup {
 		// Calculate scaled size that fits within the screen limits
 		// This is the size at minimum zoom
 		mSourceScale = Math.min(mParentSize.x/size.x, mParentSize.y/size.y);
-		Point newSize = new Point((int)(size.x*mSourceScale), (int)(size.y*mSourceScale));
+		if (mSourceScale <= 0 || Float.isNaN(mSourceScale) || Float.isInfinite(mSourceScale)) {
+			mSourceScale = 1.0f;
+		}
+		Point newSize = new Point(
+				Math.max(1, Math.round(size.x * mSourceScale)),
+				Math.max(1, Math.round(size.y * mSourceScale)));
 		mSize = newSize;
 
 		if (mErrorIndicator != null)
@@ -304,6 +368,7 @@ public class PageView extends ViewGroup {
 					clearRenderError();
 					mEntire.setImageBitmap(mEntireBm);
 					mEntire.invalidate();
+					notifyFirstPageRenderedIfNeeded();
 				} else {
 					setRenderError("Error rendering page");
 				}
@@ -623,6 +688,8 @@ public class PageView extends ViewGroup {
 			public Boolean doInBackground(Cookie cookie, Void ... params) {
 				if (bm == null)
 					return new Boolean(false);
+				if (bm.isRecycled() || sizeX <= 0 || sizeY <= 0 || patchWidth <= 0 || patchHeight <= 0)
+					return new Boolean(false);
 				// Workaround bug in Android Honeycomb 3.x, where the bitmap generation count
 				// is not incremented when drawing.
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB &&
@@ -646,6 +713,8 @@ public class PageView extends ViewGroup {
 			@Override
 			public Boolean doInBackground(Cookie cookie, Void ... params) {
 				if (bm == null)
+					return new Boolean(false);
+				if (bm.isRecycled() || sizeX <= 0 || sizeY <= 0 || patchWidth <= 0 || patchHeight <= 0)
 					return new Boolean(false);
 				// Workaround bug in Android Honeycomb 3.x, where the bitmap generation count
 				// is not incremented when drawing.
