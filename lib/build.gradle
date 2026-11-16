@@ -1,21 +1,20 @@
 apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
 
-group = 'com.artifex.mupdf'
-version = '1.26.10a'
+group = 'br.com.nfeup.libs'
+version = '1.26.10a-nfeup.1'
 
 dependencies {
-	implementation 'androidx.appcompat:appcompat:1.1.+'
-	api 'com.artifex.mupdf:fitz:1.26.10'
+	implementation 'androidx.appcompat:appcompat:1.1.0'
+	api 'com.artifex.mupdf:fitz:1.27.1'
 }
 
 android {
 	namespace 'com.artifex.mupdf.viewer'
     defaultConfig {
-        minSdkVersion myMinSdkVersion
-        targetSdkVersion myTargetSdkVersion
-        compileSdkVersion = myCompileSdkVersion
-        //targetSdkVersion 25
+		minSdkVersion 21
+		targetSdkVersion 36
+		compileSdkVersion = 36
     }
 
 	publishing {
@@ -29,12 +28,15 @@ project.afterEvaluate {
 	publishing {
 		publications {
 			release(MavenPublication) {
-				artifactId 'viewer'
-				artifact(bundleReleaseAar)
+				groupId = project.group
+				artifactId = 'mupdf-viewer'
+				version = project.version
+				from components.release
 
 				pom {
-					name = 'viewer'
-					url = 'http://www.mupdf.com'
+					name = 'NFeUp MuPDF Viewer'
+					url = 'https://github.com/brunoquerino/nfeup-mupdf-viewer'
+					description = 'MuPDF Android Viewer com extensoes de renderizacao, texto e codigo de barras usadas pelo NFe Visualizador.'
 					licenses {
 						license {
 							name = 'GNU Affero General Public License'
@@ -42,25 +44,12 @@ project.afterEvaluate {
 						}
 					}
 				}
-				pom.withXml {
-					final dependenciesNode = asNode().appendNode('dependencies')
-					configurations.implementation.allDependencies.each {
-						def dependencyNode = dependenciesNode.appendNode('dependency')
-						dependencyNode.appendNode('groupId', it.group)
-						dependencyNode.appendNode('artifactId', it.name)
-						dependencyNode.appendNode('version', it.version)
-					}
-				}
 			}
 		}
 		repositories {
 			maven {
-				name 'Local'
-				if (project.hasProperty('MAVEN_REPO')) {
-					url = MAVEN_REPO
-				} else {
-					url = "file://${System.properties['user.home']}/MAVEN"
-				}
+				name = 'Nfeup'
+				url = layout.buildDirectory.dir('maven-repository')
 			}
 		}
 	}
