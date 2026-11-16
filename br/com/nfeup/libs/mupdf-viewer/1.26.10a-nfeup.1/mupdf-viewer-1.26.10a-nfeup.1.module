@@ -1,0 +1,117 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "br.com.nfeup.libs",
+    "module": "mupdf-viewer",
+    "version": "1.26.10a-nfeup.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.5.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "releaseVariantReleaseApiPublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "com.artifex.mupdf",
+          "module": "fitz",
+          "version": {
+            "requires": "1.27.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.2.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "mupdf-viewer-1.26.10a-nfeup.1.aar",
+          "url": "mupdf-viewer-1.26.10a-nfeup.1.aar",
+          "size": 97424,
+          "sha512": "31cfd3da0a99bd7703434993d24455ed62080d07391fd60eebf534728e8fac88dccedab6e0639fd6c5c79ea6b191c3ba10c8ddc0313f53e8a5cd58fd5b6bbbd3",
+          "sha256": "de5854d995eee3b1294550afbb6fb2ec10dee97ecda26dd709d74d389fc2cd5f",
+          "sha1": "b74087133e2e2bea8dd6919a83bea93aceee7e25",
+          "md5": "a2868f9b00c6e7f221a0758306ec4338"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseRuntimePublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "androidx.appcompat",
+          "module": "appcompat",
+          "version": {
+            "requires": "1.1.0"
+          }
+        },
+        {
+          "group": "com.artifex.mupdf",
+          "module": "fitz",
+          "version": {
+            "requires": "1.27.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.2.10"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "mupdf-viewer-1.26.10a-nfeup.1.aar",
+          "url": "mupdf-viewer-1.26.10a-nfeup.1.aar",
+          "size": 97424,
+          "sha512": "31cfd3da0a99bd7703434993d24455ed62080d07391fd60eebf534728e8fac88dccedab6e0639fd6c5c79ea6b191c3ba10c8ddc0313f53e8a5cd58fd5b6bbbd3",
+          "sha256": "de5854d995eee3b1294550afbb6fb2ec10dee97ecda26dd709d74d389fc2cd5f",
+          "sha1": "b74087133e2e2bea8dd6919a83bea93aceee7e25",
+          "md5": "a2868f9b00c6e7f221a0758306ec4338"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseSourcePublication",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "mupdf-viewer-1.26.10a-nfeup.1-sources.jar",
+          "url": "mupdf-viewer-1.26.10a-nfeup.1-sources.jar",
+          "size": 31620,
+          "sha512": "4af34226ecb96b66545ebde3d6843b5728fd03cabe5b5dc02339a8549263d275d18893a967d1a14f3e076bf731588dc088620273b2f9222090520a18d1a83a29",
+          "sha256": "7ff4211a3ad0f9150b811bd38edd03584ef395e5f5dd716461b81e1e1f7bb3f1",
+          "sha1": "cdea1d1b24605dfb8b4a9feb0bafb69cf2fbf8e3",
+          "md5": "1804c83a5740a217e09581be296925e4"
+        }
+      ]
+    }
+  ]
+}
